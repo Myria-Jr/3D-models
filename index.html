@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Porsche 911 GT3 RS (992) — Interaktives 3D-Modell & Explosionsansicht</title>
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --panel: rgba(16, 20, 29, 0.86);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #eef2f7;
+      --muted: #93a1b5;
+      --accent: #d92626;
+      --accent-soft: rgba(217, 38, 38, 0.22);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #1c2434 0%, #090c12 72%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      user-select: none;
+    }
+
+    #canvas-wrap {
+      position: fixed;
+      inset: 0;
+    }
+
+    .hud-panel {
+      position: fixed;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      z-index: 10;
+    }
+
+    /* Linkes Steuerungs-Panel */
+    #controls-panel {
+      top: 16px;
+      left: 16px;
+      width: 315px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .brand-tag {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .brand h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand p {
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn-row.tri {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 2px;
+    }
+
+    .toggle-item input {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 7px;
+    }
+
+    .swatch {
+      height: 26px;
+      border-radius: 7px;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .swatch:hover { transform: scale(1.08); }
+    .swatch.active { border-color: #ffffff; box-shadow: 0 0 0 2px var(--accent); }
+
+    /* Rechtes Bauteil- & Info-Panel */
+    #inspector-panel {
+      top: 16px;
+      right: 16px;
+      width: 310px;
+      max-height: calc(100vh - 32px);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    #part-info {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+    }
+
+    #part-info .part-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffd166;
+      margin-bottom: 4px;
+    }
+
+    #part-info h2 {
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    #part-info p {
+      font-size: 11.5px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    #part-specs {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .spec-box span {
+      display: block;
+      font-size: 9.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .spec-box strong {
+      font-size: 11.5px;
+      color: var(--text);
+    }
+
+    #parts-list {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-right: 2px;
+    }
+
+    .part-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-align: left;
+      padding: 7px 9px;
+      font-size: 11.5px;
+    }
+
+    .part-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .part-btn.active .part-num {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #bottom-bar {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 16px;
+      font-size: 11.5px;
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      white-space: nowrap;
+    }
+
+    #toggle-ui-btn {
+      position: fixed;
+      bottom: 14px;
+      left: 16px;
+      z-index: 20;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+    }
+
+    body.ui-hidden #controls-panel,
+    body.ui-hidden #inspector-panel,
+    body.ui-hidden #bottom-bar {
+      display: none;
+    }
+
+    #error-banner {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #0b0e14;
+      color: #fff;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 32px;
+      z-index: 999;
+    }
+
+    @media (max-width: 960px) {
+      #controls-panel, #inspector-panel { width: 255px; }
+      #bottom-bar { display: none; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="canvas-wrap"></div>
+
+  <div id="error-banner">
+    <div>
+      <h2>Three.js konnte nicht geladen werden</h2>
+      <p style="margin-top:10px;color:#93a1b5;">
+        Bitte prüfe deine Internetverbindung (für <code>cdn.jsdelivr.net/npm/three@0.147.0</code>) und lade die Seite neu.
+      </p>
+    </div>
+  </div>
+
+  <!-- Steuerungs-HUD links -->
+  <aside id="controls-panel" class="hud-panel">
+    <div class="brand">
+      <span class="brand-tag">Typ 992 • Motorsport-Technik</span>
+      <h1>Porsche 911 GT3 RS</h1>
+      <p>Interaktives 3D-CAD-Modell &amp; Explosionsansicht</p>
+    </div>
+
+    <div>
+      <div class="section-title">
+        <span>Explosionsansicht</span>
+        <strong id="explode-pct" style="color:#fff;">0%</strong>
+      </div>
+      <div class="slider-row">
+        <input id="explode-slider" type="range" min="0" max="100" value="0" />
+        <div class="btn-row">
+          <button id="btn-assemble" class="active">Zusammenbau</button>
+          <button id="btn-explode">Explodieren</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Optionen &amp; Aero</div>
+      <div class="toggle-list">
+        <label class="toggle-item">
+          <span>CAD-Explosionsachsen</span>
+          <input id="chk-guides" type="checkbox" checked />
+        </label>
+        <label class="toggle-item">
+          <span>DRS-Heckflügel aktiv (Flach)</span>
+          <input id="chk-drs" type="checkbox" />
+        </label>
+        <label class="toggle-item">
+          <span>Röntgen / Karosserie transparent</span>
+          <input id="chk-xray" type="checkbox" />
+        </label>
+        <label class="toggle-item">
+          <span>Auto-Rotation</span>
+          <input id="chk-rotate" type="checkbox" />
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">
+        <span>Lackierung</span>
+        <span id="paint-name" style="color:#fff;font-weight:600;text-transform:none;letter-spacing:0;">Eisgraumetallic</span>
+      </div>
+      <div class="swatches" id="paint-swatches"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Kamera-Ansichten</div>
+      <div class="btn-row tri">
+        <button data-cam="front34">3/4 Front</button>
+        <button data-cam="side">Seite</button>
+        <button data-cam="rear">Motor &amp; Heck</button>
+        <button data-cam="top">Draufsicht</button>
+        <button data-cam="cockpit">Cockpit</button>
+        <button data-cam="reset">Reset</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bauteil-Inspektor rechts -->
+  <aside id="inspector-panel" class="hud-panel">
+    <div id="part-info">
+      <span class="part-badge" id="info-badge">Gesamtfahrzeug • 992 GT3 RS</span>
+      <h2 id="info-title">Bauteil anklicken zur Inspektion</h2>
+      <p id="info-desc">
+        Ziehe am Explosions-Slider oder klicke auf eine Baugruppe im 3D-Modell bzw. in der Liste unten, um technische Details einzublenden.
+      </p>
+      <div id="part-specs">
+        <div class="spec-box"><span>Leistung</span><strong>525 PS / 9.000 U/min</strong></div>
+        <div class="spec-box"><span>Abtrieb (285 km/h)</span><strong>860 kg</strong></div>
+        <div class="spec-box"><span>0–100 km/h</span><strong>3,0 s</strong></div>
+        <div class="spec-box"><span>Leergewicht</span><strong>1.450 kg (DIN)</strong></div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-bottom:0;">Baugruppen (14)</div>
+    <div id="parts-list"></div>
+  </aside>
+
+  <button id="toggle-ui-btn">UI ausblenden</button>
+
+  <div id="bottom-bar">
+    <span>Linksklick: Drehen</span>
+    <span>•</span>
+    <span>Mausrad: Zoom</span>
+    <span>•</span>
+    <span>Rechtsklick: Verschieben</span>
+    <span>•</span>
+    <span>Klick auf Teil: Details</span>
+  </div>
+
+  <script>
+    (function () {
+      if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+        document.getElementById('error-banner').style.display = 'flex';
+        return;
+      }
+
+      // =========================================================================
+      // 1. SZENE, KAMERA, RENDERER & STUDIO-REFLEXION
+      // =========================================================================
+      const container = document.getElementById('canvas-wrap');
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x090c12, 0.042);
+
+      const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.05, 80);
+      camera.position.set(4.3, 1.95, 4.4);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.065;
+      controls.target.set(0, 0.58, 0);
+      controls.minDistance = 1.6;
+      controls.maxDistance = 12;
+      controls.maxPolarAngle = Math.PI * 0.495;
+
+      // Prozedurale Studio-Softbox-Umgebung für realistische Lack- & Carbon-Reflexionen
+      function createStudioEnvironment() {
+        const c = document.createElement('canvas');
+        c.width = 512;
+        c.height = 256;
+        const ctx = c.getContext('2d');
+
+        const grad = ctx.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0.0, '#1e2738');
+        grad.addColorStop(0.45, '#3b4a62');
+        grad.addColorStop(0.52, '#141820');
+        grad.addColorStop(1.0, '#07090d');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 512, 256);
+
+        // Studio-Lichtbänder
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.fillRect(40, 24, 180, 22);
+        ctx.fillRect(280, 20, 190, 18);
+        ctx.fillStyle = 'rgba(210,228,255,0.65)';
+        ctx.fillRect(100, 68, 320, 10);
+        ctx.fillStyle = 'rgba(255,235,210,0.5)';
+        ctx.fillRect(20, 95, 90, 26);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        tex.encoding = THREE.sRGBEncoding;
+
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const rt = pmrem.fromEquirectangular(tex);
+        scene.environment = rt.texture;
+        tex.dispose();
+        pmrem.dispose();
+      }
+      createStudioEnvironment();
+
+      // Licht-Setup
+      scene.add(new THREE.HemisphereLight(0xdce8ff, 0x161a22, 0.65));
+
+      const keyLight = new THREE.DirectionalLight(0xfff8ef, 1.85);
+      keyLight.position.set(5.5, 7.5, 4.5);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.set(2048, 2048);
+      keyLight.shadow.camera.near = 1;
+      keyLight.shadow.camera.far = 22;
+      keyLight.shadow.camera.left = -4;
+      keyLight.shadow.camera.right = 4;
+      keyLight.shadow.camera.top = 4;
+      keyLight.shadow.camera.bottom = -4;
+      keyLight.shadow.bias = -0.0005;
+      scene.add(keyLight);
+
+      const rimLight = new THREE.DirectionalLight(0x88b4ff, 1.05);
+      rimLight.position.set(-5.0, 4.2, -5.2);
+      scene.add(rimLight);
+
+      const underLight = new THREE.PointLight(0x3a527a, 0.7, 9);
+      underLight.position.set(0, 0.3, -1.6);
+      scene.add(underLight);
+
+      // Showroom-Boden & dezentes Drehscheiben-Gitter
+      const floor = new THREE.Mesh(
+        new THREE.CircleGeometry(14, 72),
+        new THREE.MeshStandardMaterial({ color: 0x0d1118, roughness: 0.38, metalness: 0.25 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const grid = new THREE.GridHelper(12, 24, 0x2c384e, 0x18202e);
+      grid.position.y = 0.002;
+      scene.add(grid);
+
+      const turntableRing = new THREE.Mesh(
+        new THREE.RingGeometry(2.62, 2.66, 96),
+        new THREE.MeshBasicMaterial({ color: 0x3b4d6b, side: THREE.DoubleSide })
+      );
+      turntableRing.rotation.x = -Math.PI / 2;
+      turntableRing.position.y = 0.004;
+      scene.add(turntableRing);
+
+      // =========================================================================
+      // 2. PROZEDURALE TEXTUREN & MATERIAL-VERWALTUNG (PRO BAUGRUPPE)
+      // =========================================================================
+      function createCarbonTexture() {
+        const c = document.createElement('canvas');
+        c.width = 16;
+        c.height = 16;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#181b20';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#2a2f38';
+        ctx.fillRect(0, 0, 8, 8);
+        ctx.fillRect(8, 8, 8, 8);
+        ctx.fillStyle = '#101216';
+        ctx.fillRect(4, 0, 4, 8);
+        ctx.fillRect(12, 8, 4, 8);
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(36, 36);
+        tex.encoding = THREE.sRGBEncoding;
+        return tex;
+      }
+      const carbonTex = createCarbonTexture();
+
+      const PAINT_COLORS = [
+        { name: 'Eisgraumetallic', hex: 0xc9d0d8 },
+        { name: 'Pythongrün', hex: 0x2c8c42 },
+        { name: 'Indischrot', hex: 0xc91e1e },
+        { name: 'Kreide', hex: 0xd8d5cd },
+        { name: 'Sternrubin Neo', hex: 0xb5246e },
+        { name: 'Sharkblue', hex: 0x166ec4 }
+      ];
+      let currentPaintHex = PAINT_COLORS[0].hex;
+
+      // Material-Registry pro partId für sauberes Highlight & Röntgen ohne Seiteneffekte
+      const partMaterials = new Map();
+      const paintMatList = [];
+      const xrayMatList = [];
+
+      function registerMat(partId, mat, opts = {}) {
+        if (!partMaterials.has(partId)) partMaterials.set(partId, []);
+        mat.userData.baseEmissive = mat.emissive ? mat.emissive.clone() : new THREE.Color(0x000000);
+        mat.userData.baseEmissiveInt = mat.emissiveIntensity !== undefined ? mat.emissiveIntensity : 1;
+        mat.userData.baseOpacity = mat.opacity !== undefined ? mat.opacity : 1;
+        mat.userData.baseTransparent = !!mat.transparent;
+        partMaterials.get(partId).push(mat);
+        if (opts.isPaint) paintMatList.push(mat);
+        if (opts.xrayAffected) xrayMatList.push(mat);
+        return mat;
+      }
+
+      const makePaintMat = (partId, xray = true) =>
+        registerMat(partId, new THREE.MeshPhysicalMaterial({
+          color: currentPaintHex,
+          metalness: 0.35,
+          roughness: 0.2,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.08,
+          side: THREE.DoubleSide
+        }), { isPaint: true, xrayAffected: xray });
+
+      const makeCarbonMat = (partId, xray = true) =>
+        registerMat(partId, new THREE.MeshPhysicalMaterial({
+          color: 0x22262d,
+          map: carbonTex,
+          metalness: 0.25,
+          roughness: 0.32,
+          clearcoat: 0.85,
+          clearcoatRoughness: 0.14,
+          side: THREE.DoubleSide
+        }), { xrayAffected: xray });
+
+      const makeGlassMat = (partId) =>
+        registerMat(partId, new THREE.MeshPhysicalMaterial({
+          color: 0x0f1a26,
+          metalness: 0.1,
+          roughness: 0.06,
+          transparent: true,
+          opacity: 0.44,
+          clearcoat: 1.0,
+          side: THREE.DoubleSide
+        }), { xrayAffected: true });
+
+      const makeMetalMat = (partId, color = 0x8e98a6, rough = 0.28, metal = 0.88) =>
+        registerMat(partId, new THREE.MeshStandardMaterial({
+          color,
+          roughness: rough,
+          metalness: metal,
+          side: THREE.DoubleSide
+        }));
+
+      const makeDarkMat = (partId, color = 0x16191f, rough = 0.65) =>
+        registerMat(partId, new THREE.MeshStandardMaterial({
+          color,
+          roughness: rough,
+          metalness: 0.15,
+          side: THREE.DoubleSide
+        }));
+
+      // =========================================================================
+      // 3. PARAMETRISCHE PORSCHE-992-KONTUREN & GEOMETRIE-HELFER
+      // =========================================================================
+      const carRoot = new THREE.Group();
+      scene.add(carRoot);
+
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function smoothstep(e0, e1, x) {
+        const t = clamp((x - e0) / (e1 - e0), 0, 1);
+        return t * t * (3 - 2 * t);
+      }
+
+      // Stützpunkt-Interpolation für präzise 911 GT3 RS Linienführung
+      function sampleCurve(pts, z) {
+        // pts absteigend nach z sortiert (Front +2.25 -> Heck -2.25)
+        if (z >= pts[0][0]) return pts[0][1];
+        if (z <= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+        for (let i = 0; i < pts.length - 1; i++) {
+          const [z0, y0] = pts[i];
+          const [z1, y1] = pts[i + 1];
+          if (z <= z0 && z >= z1) {
+            const t = (z0 - z) / (z0 - z1);
+            const st = t * t * (3 - 2 * t);
+            return lerp(y0, y1, st);
+          }
+        }
+        return pts[0][1];
+      }
+
+      // 992 GT3 RS Höhenprofile (Z: +2.24 Front bis -2.18 Heck, Y: Höhe in Metern)
+      const CENTER_TOP_PTS = [
+        [2.24, 0.24], [2.10, 0.46], [1.75, 0.60], [1.20, 0.68], [0.70, 0.78],
+        [0.18, 1.23], [-0.25, 1.32], [-0.78, 1.18], [-1.35, 0.96], [-1.98, 0.88], [-2.18, 0.76]
+      ];
+      const FENDER_CREST_PTS = [
+        [2.18, 0.30], [1.88, 0.62], [1.56, 0.76], [1.28, 0.82], [0.85, 0.79],
+        [0.58, 0.80], [0.00, 0.82], [-0.62, 0.90], [-1.18, 0.95], [-1.85, 0.90], [-2.15, 0.77]
+      ];
+      const HALF_WIDTH_PTS = [
+        [2.24, 0.72], [2.04, 0.93], [1.65, 0.97], [1.28, 0.99], [0.75, 0.94],
+        [0.10, 0.91], [-0.55, 0.94], [-1.18, 1.03], [-1.85, 0.96], [-2.18, 0.84]
+      ];
+
+      function archCutout(z, axleZ, archR, axleY) {
+        const dz = z - axleZ;
+        if (Math.abs(dz) >= archR) return -10;
+        return axleY + Math.sqrt(Math.max(0, archR * archR - dz * dz));
+      }
+
+      // Erzeugt ein geglättetes 3D-Flächennetz aus einem (u, v) -> [x, y, z] Evaluator
+      function createSurfaceGeometry(uSteps, vSteps, evalFn) {
+        const positions = [];
+        const uvs = [];
+        const indices = [];
+        for (let i = 0; i <= uSteps; i++) {
+          const u = i / uSteps;
+          for (let j = 0; j <= vSteps; j++) {
+            const v = j / vSteps;
+            const [x, y, z] = evalFn(u, v);
+            positions.push(x, y, z);
+            uvs.push(u, v);
+          }
+        }
+        for (let i = 0; i < uSteps; i++) {
+          for (let j = 0; j < vSteps; j++) {
+            const a = i * (vSteps + 1) + j;
+            const b = (i + 1) * (vSteps + 1) + j;
+            const c = (i + 1) * (vSteps + 1) + (j + 1);
+            const d = i * (vSteps + 1) + (j + 1);
+            indices.push(a, b, d);
+            indices.push(b, c, d);
+          }
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geo.setIndex(indices);
+        geo.computeVertexNormals();
+        return geo;
+      }
+
+      function tagPart(obj, partId) {
+        obj.traverse((child) => {
+          if (child.isMesh) {
+            child.userData.partId = partId;
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+        return obj;
+      }
+
+      // =========================================================================
+      // 4. ALLE 14 BAUGRUPPEN DES PORSCHE 911 GT3 RS (992)
+      // =========================================================================
+      const PARTS_DATA = [
+        {
+          id: 'chassis',
+          num: 1,
+          name: 'Aluminium-Verbund-Rohbau & Unterboden',
+          category: 'Struktur & Fahrwerk',
+          desc: 'Leichtbau-Mischbauweise aus Aluminium-Druckguss und hochfestem Stahl mit komplett verkleidetem Venturi-Unterboden sowie Doppelquerlenker-Vorderachse (aus dem 911 RSR Motorsport) und Mehrlenker-Hinterachse.',
+          specs: [['Bauweise', 'Alu-Stahl-Verbund'], ['Vorderachse', 'Doppelquerlenker'], ['Hinterachse', 'Mehrlenker + HAL'], ['Spurweite', '1.630 / 1.600 mm']],
+          subMoves: []
+        },
+        {
+          id: 'radiator',
+          num: 2,
+          name: 'Zentralkühler-Modul (Mittelkühler)',
+          category: 'Kühlung & Aero',
+          desc: 'Statt der klassischen drei Kühler nutzt der 992 GT3 RS einen einzigen, groß dimensionierten und nach vorn geneigten Zentralkühler im Bug. Der frei gewordene Seitenraum ermöglicht aktive Front-Aero-Elemente.',
+          specs: [['Layout', '1× Großer Mittelkühler'], ['Neigung', 'ca. 28° nach vorn'], ['Abluft', 'Über Fronthauben-NACA'], ['Gewinn', 'Platz für aktive Flaps']],
+          subMoves: []
+        },
+        {
+          id: 'frontBumper',
+          num: 3,
+          name: 'Frontschürze, Splitter & Dive-Planes',
+          category: 'Front-Aerodynamik',
+          desc: 'Breiter Frontsplitter mit seitlichen Canards und integrierten aktiven Luftleitelementen. Leitet Kühlluft gezielt zum Zentralkühler und erzeugt massiven Vorderachsabtrieb.',
+          specs: [['Splitter', 'CFK-Verbundlippe'], ['Aktive Aero', 'Stufenlose Frontflaps'], ['Breite', '2.027 mm (o. Spiegel)'], ['Funktion', 'Aero-Balance vorn']],
+          subMoves: []
+        },
+        {
+          id: 'hood',
+          num: 4,
+          name: 'CFK-Fronthaube mit NACA-Luftauslässen',
+          category: 'Leichtbau-Karosserie',
+          desc: 'Aus kohlenstofffaserverstärktem Kunststoff (CFK) gefertigte Haube mit markanten Doppel-Auslasskanälen. Leitet heiße Abluft des Mittelkühlers seitlich am Cockpit vorbei Richtung Heckflügel.',
+          specs: [['Material', 'CFK (Sichtcarbon)'], ['Öffnungen', 'Twin-NACA-Abluft'], ['Strömung', 'Um Dach herum geleitet'], ['Paket', 'Weissach-Sichtcarbon']],
+          subMoves: []
+        },
+        {
+          id: 'frontFenders',
+          num: 5,
+          name: 'Kotflügel vorn, Matrix-LED & Louvers',
+          category: 'Karosserie & Entlüftung',
+          desc: 'Charakteristische 911-Kotflügel mit geneigten Matrix-LED-Scheinwerfern, oberen Radhaus-Lamellen (Louvers) und offenen seitlichen Luftauslässen zur Reduzierung des Überdrucks im Radkasten.',
+          specs: [['Entlüftung', 'Radhaus-Louvers'], ['Scheinwerfer', 'Matrix-LED abgedunkelt'], ['Luftführung', 'Side-Aero-Blades'], ['Material', 'CFK-Leichtbau']],
+          subMoves: []
+        },
+        {
+          id: 'doors',
+          num: 6,
+          name: 'CFK-Leichtbautüren & Aero-Spiegel',
+          category: 'Karosserie & Seitenführung',
+          desc: 'Rahmenlose Türen aus CFK mit seitlichem Luftleit-Einzug für den hinteren Radhausaustritt und strömungsoptimierten SportDesign-Außenspiegeln.',
+          specs: [['Material', 'CFK-Türblätter'], ['Seiten-Finnen', 'Seitenschweller-Klingen'], ['Spiegel', 'Aero-Steg-Design'], ['Gewichtsvorteil', 'ca. -9 kg ggü. Stahl']],
+          subMoves: []
+        },
+        {
+          id: 'bodyShell',
+          num: 7,
+          name: 'Karosserie-Seitenteile & Verglasung',
+          category: 'Widebody-Karosserie',
+          desc: 'Breit ausgestellte hintere Kotflügel mit seitlichen Lufteinlässen für die Prozessluft, Front- und Heckscheibe aus Leichtbauglas sowie die ikonische 911-Flyline.',
+          specs: [['Heckbreite', '+29 mm vs. GT3'], ['Verglasung', 'Leichtbau-Verbundglas'], ['Lufteinlass', 'Seitenwand-Scoop'], ['C-Säule', 'Fastback-Silhouette']],
+          subMoves: []
+        },
+        {
+          id: 'roof',
+          num: 8,
+          name: 'CFK-Dach mit Aero-Dachfinnen',
+          category: 'Weissach-Dach & Aero',
+          desc: 'Extrem leichtes Carbon-Dach mit zwei markanten Längsfinnen. Sie lenken die aus der Fronthaube strömende Warmluft gezielt außen vorbei, damit kühlere Luft den Motor und Heckflügel erreicht.',
+          specs: [['Material', 'CFK-Sichtcarbon'], ['Dachfinnen', '2× Längs-Leitfinnen'], ['Fahrzeughöhe', '1.322 mm'], ['Schwerpunkt', 'Deutlich abgesenkt']],
+          subMoves: []
+        },
+        {
+          id: 'interior',
+          num: 9,
+          name: 'Cockpit, CFK-Schalensitze & Käfig',
+          category: 'Innenraum & Sicherheit',
+          desc: 'Vollcarbon-Schalensitze, GT3 RS-Sportlenkrad mit 4 Drehschaltern (Fahrmodi, PASM, PTV+, TC/ESC sowie DRS-Taste) und eingeschraubter CFK-/Stahl-Überrollkäfig (Clubsport/Weissach).',
+          specs: [['Sitze', 'CFK-Vollschalensitze'], ['Lenkrad', '4 Drehregler + DRS'], ['Käfig', 'Clubsport / CFK-Option'], ['Anzeige', 'Zentraler 9.000-Drehzahlm.']],
+          subMoves: []
+        },
+        {
+          id: 'engine',
+          num: 10,
+          name: '4,0-Liter-Sechszylinder-Boxermotor & PDK',
+          category: 'Antriebsstrang',
+          desc: 'Hochdrehzahl-Saugmotor mit Einzeldrosselklappen, geänderten Nockenwellen und starr gelagertem 7-Gang-PDK. Dreht bis 9.000/min und leistet 386 kW (525 PS).',
+          specs: [['Hubraum', '3.996 cm³ Boxer-6'], ['Leistung', '525 PS @ 8.500/min'], ['Drehmoment', '465 Nm @ 6.300/min'], ['Getriebe', '7-Gang-PDK (kurz)']],
+          subMoves: []
+        },
+        {
+          id: 'exhaust',
+          num: 11,
+          name: 'Fächerkrümmer & Titan-Abgasanlage',
+          category: 'Abgasanlage',
+          desc: 'Dünnwandige Edelstahl-/Titan-Abgasanlage mit 6-in-2-Fächerkrümmer, zwei Otto-Partikelfiltern/Katalysatoren und markanten zentralen Doppelendrohren.',
+          specs: [['Material', 'Titan / Edelstahl'], ['Endrohre', '2× Zentral (Gebürstet)'], ['Krümmer', '6-in-2 Gleichlänge'], ['Sound', 'Hochdrehzahl-Saugmotor']],
+          subMoves: []
+        },
+        {
+          id: 'rearBumper',
+          num: 12,
+          name: 'Heckschürze, LED-Leuchtband & Diffusor',
+          category: 'Heck-Aerodynamik',
+          desc: 'Durchgehendes 992-LED-Rückleuchtenband, großflächige Radhaus-Abluftöffnungen im Heckstoßfänger und mehrfinniger Venturi-Heckdiffusor aus Carbon.',
+          specs: [['Diffusor', 'Multi-Fin Venturi CFK'], ['Leuchtband', 'Durchgehendes LED-Band'], ['Entlüftung', 'Breite Heckgitter'], ['Funktion', 'Unterboden-Sogeffekt']],
+          subMoves: []
+        },
+        {
+          id: 'wing',
+          num: 13,
+          name: 'Swan-Neck-Heckflügel mit aktivem DRS',
+          category: 'Aktive Heck-Aerodynamik',
+          desc: 'Erstmals bei einem Serien-Porsche überragt der Zweiblatt-Flügel die Dachhöhe. Die von oben greifenden Schwanenhals-Stützen lassen die Unterseite ungestört; der obere Flügel stellt sich per DRS hydraulisch flach.',
+          specs: [['Aufhängung', 'Swan-Neck (Aluminium)'], ['Abtrieb 200 km/h', '409 kg Gesamtabtrieb'], ['Abtrieb 285 km/h', '860 kg Gesamtabtrieb'], ['DRS-Funktion', 'Hydraulisch schwenkbar']],
+          subMoves: []
+        },
+        {
+          id: 'brakes',
+          num: 14,
+          name: 'PCCB-Keramikbremsanlage & Schmiederäder',
+          category: 'Bremsen & Räder (4×)',
+          desc: 'Gelochte Porsche Ceramic Composite Brakes (PCCB) mit gelben 6-Kolben-Alu-Monobloc-Festsätteln vorn (410 mm) und 4-Kolben hinten (390 mm), kombiniert mit 20"/21"-Zentralverschluss-Schmiederädern.',
+          specs: [['Bremsscheiben', '410 mm / 390 mm PCCB'], ['Räder vorn', '275/35 ZR 20 (10J)'], ['Räder hinten', '335/30 ZR 21 (13J)'], ['Verschluss', 'Zentralverschluss']],
+          subMoves: []
+        }
+      ];
+
+      const partById = Object.fromEntries(PARTS_DATA.map((p) => [p.id, p]));
+      const guideAnchors = []; // { obj, anchorLocal, offset }
+
+      function registerSubMove(partId, obj, offsetVec, anchorVec) {
+        partById[partId].subMoves.push({ obj, offset: offsetVec.clone() });
+        guideAnchors.push({ obj, anchor: anchorVec.clone(), offset: offsetVec.clone() });
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 1: CHASSIS, ROHBAU, UNTERBODEN & FAHRWERK
+      // =========================================================================
+      const chassisGroup = new THREE.Group();
+      carRoot.add(chassisGroup);
+      {
+        const pid = 'chassis';
+        const aluMat = makeMetalMat(pid, 0x8e98a8, 0.34, 0.85);
+        const trayMat = makeDarkMat(pid, 0x15181e, 0.72);
+        const steelMat = makeMetalMat(pid, 0x3b424d, 0.4, 0.75);
+        const springMat = makeMetalMat(pid, 0xd9a726, 0.3, 0.6);
+
+        // Zentraler Aluminium-Unterboden / Venturi-Platte
+        const floorTray = new THREE.Mesh(new THREE.BoxGeometry(1.56, 0.045, 3.85), trayMat);
+        floorTray.position.set(0, 0.135, 0.02);
+        chassisGroup.add(floorTray);
+
+        // Seitenschweller-Träger & Mitteltunnel
+        [-0.74, 0.74].forEach((x) => {
+          const sill = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.16, 2.25), aluMat);
+          sill.position.set(x, 0.22, 0.05);
+          chassisGroup.add(sill);
+        });
+        const tunnel = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.22, 1.85), aluMat);
+        tunnel.position.set(0, 0.24, 0.05);
+        chassisGroup.add(tunnel);
+
+        // Spritzwand vorn & hinten
+        const frontBulk = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.42, 0.06), aluMat);
+        frontBulk.position.set(0, 0.40, 0.76);
+        chassisGroup.add(frontBulk);
+
+        const rearBulk = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.48, 0.06), aluMat);
+        rearBulk.position.set(0, 0.44, -0.78);
+        chassisGroup.add(rearBulk);
+
+        // Vorderer Längsträger + Crashbar + Federbeindome
+        [-0.44, 0.44].forEach((x) => {
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.10, 1.15), aluMat);
+          rail.position.set(x, 0.34, 1.38);
+          chassisGroup.add(rail);
+
+          const dome = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.34, 16), aluMat);
+          dome.position.set(x * 1.25, 0.47, 1.28);
+          chassisGroup.add(dome);
+        });
+        const frontCrashBar = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.09, 0.09), aluMat);
+        frontCrashBar.position.set(0, 0.31, 1.98);
+        chassisGroup.add(frontCrashBar);
+
+        // Hinterer Hilfsrahmen für Boxermotor
+        [-0.46, 0.46].forEach((x) => {
+          const rRail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.11, 1.15), aluMat);
+          rRail.position.set(x, 0.36, -1.32);
+          chassisGroup.add(rRail);
+        });
+        const rearCross = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.09, 0.09), aluMat);
+        rearCross.position.set(0, 0.36, -1.88);
+        chassisGroup.add(rearCross);
+
+        // Radaufhängung (Doppelquerlenker vorn + Mehrlenker hinten + Gewindefederbeine)
+        [
+          { z: 1.28, track: 0.81, y: 0.35 },
+          { z: -1.177, track: 0.84, y: 0.367 }
+        ].forEach((ax) => {
+          [-1, 1].forEach((dir) => {
+            // Unterer & oberer Querlenker
+            [ax.y - 0.08, ax.y + 0.09].forEach((armY) => {
+              const arm = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.03, 0.11), steelMat);
+              arm.position.set(dir * (ax.track - 0.22), armY, ax.z);
+              chassisGroup.add(arm);
+            });
+            // Radträger-Nabe
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 16), aluMat);
+            hub.rotation.z = Math.PI / 2;
+            hub.position.set(dir * (ax.track - 0.08), ax.y, ax.z);
+            chassisGroup.add(hub);
+            // Federbein / Dämpfer
+            const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.38, 12), springMat);
+            strut.position.set(dir * (ax.track - 0.20), ax.y + 0.19, ax.z);
+            strut.rotation.z = dir * 0.24;
+            chassisGroup.add(strut);
+          });
+        });
+
+        tagPart(chassisGroup, pid);
+        registerSubMove(pid, chassisGroup, new THREE.Vector3(0, -0.35, 0), new THREE.Vector3(0, 0.22, 0));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 2: ZENTRALKÜHLER (MITTELKÜHLER)
+      // =========================================================================
+      const radiatorGroup = new THREE.Group();
+      carRoot.add(radiatorGroup);
+      {
+        const pid = 'radiator';
+        const coreMat = makeMetalMat(pid, 0xa8b2c0, 0.45, 0.72);
+        const shroudMat = makeDarkMat(pid, 0x1a1e26, 0.6);
+
+        const core = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.42, 0.07), coreMat);
+        core.position.set(0, 0.39, 1.56);
+        core.rotation.x = -0.52;
+        radiatorGroup.add(core);
+
+        const shroud = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.46, 0.09), shroudMat);
+        shroud.position.set(0, 0.37, 1.52);
+        shroud.rotation.x = -0.52;
+        radiatorGroup.add(shroud);
+
+        // Lüfterrad
+        const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 20), shroudMat);
+        fan.rotation.x = Math.PI / 2 - 0.52;
+        fan.position.set(0, 0.36, 1.48);
+        radiatorGroup.add(fan);
+
+        tagPart(radiatorGroup, pid);
+        registerSubMove(pid, radiatorGroup, new THREE.Vector3(0, 0.22, 1.05), new THREE.Vector3(0, 0.39, 1.56));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 3: FRONTSCHÜRZE, SPLITTER & DIVE-PLANES
+      // =========================================================================
+      const frontBumperGroup = new THREE.Group();
+      carRoot.add(frontBumperGroup);
+      {
+        const pid = 'frontBumper';
+        const pMat = makePaintMat(pid);
+        const cMat = makeCarbonMat(pid);
+        const meshMat = makeDarkMat(pid, 0x0d0f13, 0.8);
+
+        // Geschwungene Frontschürze
+        const fasciaGeo = createSurfaceGeometry(24, 10, (u, v) => {
+          const x = (u - 0.5) * 1.92;
+          const absX = Math.abs(x);
+          const sweep = absX * absX * 0.24;
+          const y = lerp(0.17, 0.51, v) - absX * 0.03;
+          const z = 2.25 - sweep - v * 0.16;
+          return [x, y, z];
+        });
+        frontBumperGroup.add(new THREE.Mesh(fasciaGeo, pMat));
+
+        // Zentraler Kühllufteinlass (schwarzes Gitter)
+        const grille = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.20, 0.14), meshMat);
+        grille.position.set(0, 0.25, 2.13);
+        frontBumperGroup.add(grille);
+
+        // Carbon-Frontsplitter mit aufgestellten Seitenfinnen
+        const splitterGeo = createSurfaceGeometry(24, 4, (u, v) => {
+          const x = (u - 0.5) * 1.98;
+          const sweep = (x * x) * 0.22;
+          const z = lerp(2.33 - sweep, 1.92, v);
+          const y = 0.115 + (Math.abs(x) > 0.88 ? 0.03 : 0);
+          return [x, y, z];
+        });
+        frontBumperGroup.add(new THREE.Mesh(splitterGeo, cMat));
+
+        // Seitliche Canards / Dive-Planes
+        [-1, 1].forEach((dir) => {
+          const canard = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.015, 0.24), cMat);
+          canard.position.set(dir * 0.96, 0.26, 2.02);
+          canard.rotation.y = dir * 0.22;
+          canard.rotation.z = dir * -0.18;
+          frontBumperGroup.add(canard);
+
+          // Seitliche Splitter-Endplatte
+          const endPlate = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.34), cMat);
+          endPlate.position.set(dir * 0.985, 0.19, 1.97);
+          frontBumperGroup.add(endPlate);
+        });
+
+        tagPart(frontBumperGroup, pid);
+        registerSubMove(pid, frontBumperGroup, new THREE.Vector3(0, -0.14, 1.48), new THREE.Vector3(0, 0.26, 2.15));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 4: CFK-FRONTHAUBE MIT NACA-LUFTAUSLÄSSEN
+      // =========================================================================
+      const hoodGroup = new THREE.Group();
+      carRoot.add(hoodGroup);
+      {
+        const pid = 'hood';
+        const cMat = makeCarbonMat(pid);
+        const ventMat = makeDarkMat(pid, 0x0b0d11, 0.85);
+        const crestMat = makeMetalMat(pid, 0xd4af37, 0.3, 0.85);
+
+        const hoodGeo = createSurfaceGeometry(18, 22, (u, v) => {
+          const z = lerp(2.08, 0.69, v);
+          const halfW = lerp(0.54, 0.64, v);
+          const x = (u - 0.5) * 2 * halfW;
+          const centerY = sampleCurve(CENTER_TOP_PTS, z);
+          const edgeY = sampleCurve(FENDER_CREST_PTS, z) - 0.025;
+          const blend = Math.pow(Math.abs(u - 0.5) * 2, 1.7);
+          let y = lerp(centerY, edgeY, blend);
+          // Vertiefte NACA-Luftauslässe in der Haubenmitte
+          if (z > 1.15 && z < 1.65 && Math.abs(x) > 0.07 && Math.abs(x) < 0.36) {
+            y -= 0.045 * Math.sin(((z - 1.15) / 0.5) * Math.PI);
+          }
+          return [x, y, z];
+        });
+        hoodGroup.add(new THREE.Mesh(hoodGeo, cMat));
+
+        // Twin NACA-Gittereinsätze & Mittelsteg
+        [-0.21, 0.21].forEach((vx) => {
+          const vent = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.03, 0.42), ventMat);
+          vent.position.set(vx, 0.64, 1.42);
+          vent.rotation.x = -0.16;
+          hoodGroup.add(vent);
+        });
+
+        // Porsche-Wappen vorn
+        const crest = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.008, 0.06), crestMat);
+        crest.position.set(0, 0.505, 2.02);
+        crest.rotation.x = -0.34;
+        hoodGroup.add(crest);
+
+        tagPart(hoodGroup, pid);
+        registerSubMove(pid, hoodGroup, new THREE.Vector3(0, 0.92, 0.92), new THREE.Vector3(0, 0.66, 1.42));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 5: KOTFLÜGEL VORN (L & R), MATRIX-LED & RADHAUS-LOUVERS
+      // =========================================================================
+      const frontFendersGroup = new THREE.Group();
+      carRoot.add(frontFendersGroup);
+      {
+        const pid = 'frontFenders';
+        const pMat = makePaintMat(pid);
+        const cMat = makeCarbonMat(pid);
+        const lensMat = makeGlassMat(pid);
+        const drlMat = registerMat(pid, new THREE.MeshStandardMaterial({
+          color: 0xffffff, emissive: 0xdff0ff, emissiveIntensity: 2.2, roughness: 0.1
+        }));
+
+        [-1, 1].forEach((dir) => {
+          const fenderSide = new THREE.Group();
+          frontFendersGroup.add(fenderSide);
+
+          // Geformter vorderer Kotflügel inkl. kreisrundem Radhausausschnitt
+          const fenderGeo = createSurfaceGeometry(28, 12, (u, v) => {
+            const z = lerp(2.12, 0.60, u);
+            const innerX = dir * lerp(0.54, 0.64, u);
+            const outerX = dir * sampleCurve(HALF_WIDTH_PTS, z);
+            const topY = sampleCurve(FENDER_CREST_PTS, z);
+            const archY = archCutout(z, 1.28, 0.395, 0.35);
+            const botY = Math.max(0.16, archY);
+
+            // v=0 innen auf Haubenkante -> v=0.45 Schulter -> v=1.0 Radlaufkante unten
+            let x, y;
+            if (v < 0.45) {
+              const t = v / 0.45;
+              x = lerp(innerX, outerX * 0.96, t);
+              y = lerp(topY - 0.02, topY, Math.sin(t * Math.PI * 0.5));
+            } else {
+              const t = (v - 0.45) / 0.55;
+              x = lerp(outerX * 0.96, outerX, Math.sin(t * Math.PI * 0.5));
+              y = lerp(topY, botY, t);
+            }
+            return [x, y, z];
+          });
+          fenderSide.add(new THREE.Mesh(fenderGeo, pMat));
+
+          // Ovaler 911-Matrix-LED-Scheinwerfer
+          const hlGroup = new THREE.Group();
+          hlGroup.position.set(dir * 0.74, 0.635, 1.82);
+          hlGroup.rotation.x = 0.56;
+          hlGroup.rotation.y = dir * 0.18;
+
+          const hlHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.125, 0.06, 24), makeDarkMat(pid, 0x0d0f14));
+          hlHousing.scale.set(0.86, 1, 1.38);
+          hlGroup.add(hlHousing);
+
+          const hlLens = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.115, 0.02, 24), lensMat);
+          hlLens.position.y = 0.028;
+          hlLens.scale.set(0.82, 1, 1.32);
+          hlGroup.add(hlLens);
+
+          // 4-Punkt-Porsche-Tagfahrlicht
+          [[-0.04, 0.05], [0.04, 0.05], [-0.04, -0.04], [0.04, -0.04]].forEach(([px, pz]) => {
+            const led = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.015, 0.028), drlMat);
+            led.position.set(px, 0.022, pz);
+            hlGroup.add(led);
+          });
+          fenderSide.add(hlGroup);
+
+          // Radhaus-Louvers (Entlüftungslamellen oben auf dem Kotflügel)
+          for (let k = 0; k < 5; k++) {
+            const slat = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.014, 0.032), cMat);
+            slat.position.set(dir * 0.80, 0.81 - k * 0.005, 1.40 - k * 0.055);
+            slat.rotation.x = -0.35;
+            fenderSide.add(slat);
+          }
+
+          // Seitlicher Aero-Radhausauslass (Blade hinter Vorderrad)
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.34, 0.14), cMat);
+          blade.position.set(dir * 0.93, 0.40, 0.72);
+          fenderSide.add(blade);
+
+          registerSubMove(pid, fenderSide, new THREE.Vector3(dir * 0.92, 0.42, 0.56), new THREE.Vector3(dir * 0.85, 0.58, 1.30));
+        });
+
+        tagPart(frontFendersGroup, pid);
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 6: CFK-LEICHTBAUTÜREN & AERO-SPIEGEL
+      // =========================================================================
+      const doorsGroup = new THREE.Group();
+      carRoot.add(doorsGroup);
+      {
+        const pid = 'doors';
+        const pMat = makePaintMat(pid);
+        const cMat = makeCarbonMat(pid);
+        const gMat = makeGlassMat(pid);
+
+        [-1, 1].forEach((dir) => {
+          const doorSide = new THREE.Group();
+          doorsGroup.add(doorSide);
+
+          // Türblatt
+          const doorGeo = createSurfaceGeometry(14, 10, (u, v) => {
+            const z = lerp(0.59, -0.52, u);
+            const topY = sampleCurve(FENDER_CREST_PTS, z);
+            const botY = 0.16;
+            const maxX = dir * sampleCurve(HALF_WIDTH_PTS, z);
+            const bulge = Math.sin(v * Math.PI) * 0.04;
+            const x = maxX + dir * bulge - dir * (1 - v) * 0.05;
+            const y = lerp(topY, botY, v);
+            return [x, y, z];
+          });
+          doorSide.add(new THREE.Mesh(doorGeo, pMat));
+
+          // Seitliches Türfenster
+          const winGeo = createSurfaceGeometry(10, 6, (u, v) => {
+            const z = lerp(0.45, -0.45, u);
+            const botY = sampleCurve(FENDER_CREST_PTS, z);
+            const topY = sampleCurve(CENTER_TOP_PTS, z) - 0.05;
+            const y = lerp(botY, topY, v);
+            const x = dir * lerp(sampleCurve(HALF_WIDTH_PTS, z) - 0.04, 0.60, v);
+            return [x, y, z];
+          });
+          doorSide.add(new THREE.Mesh(winGeo, gMat));
+
+          // Aero-Seitenschweller-Klinge
+          const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 1.12), cMat);
+          skirt.position.set(dir * 0.94, 0.145, 0.03);
+          doorSide.add(skirt);
+
+          // SportDesign-Außenspiegel
+          const stalk = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.025, 0.05), cMat);
+          stalk.position.set(dir * 0.93, 0.81, 0.36);
+          stalk.rotation.z = dir * 0.25;
+          doorSide.add(stalk);
+
+          const cap = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.075, 0.12), cMat);
+          cap.position.set(dir * 1.00, 0.84, 0.34);
+          doorSide.add(cap);
+
+          registerSubMove(pid, doorSide, new THREE.Vector3(dir * 0.92, 0.30, 0), new THREE.Vector3(dir * 0.91, 0.52, 0.04));
+        });
+
+        tagPart(doorsGroup, pid);
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 7: WIDEBODY-SEITENWÄNDE, FLYLINE & VERGLASUNG
+      // =========================================================================
+      const bodyShellGroup = new THREE.Group();
+      carRoot.add(bodyShellGroup);
+      {
+        const pid = 'bodyShell';
+        const pMat = makePaintMat(pid);
+        const cMat = makeCarbonMat(pid);
+        const gMat = makeGlassMat(pid);
+
+        // Linke und rechte hintere Seitenwand mit breiter Hüfte & Radhausausschnitt
+        [-1, 1].forEach((dir) => {
+          const rearQGeo = createSurfaceGeometry(28, 12, (u, v) => {
+            const z = lerp(-0.52, -2.16, u);
+            const innerX = dir * lerp(0.58, 0.60, u);
+            const outerX = dir * sampleCurve(HALF_WIDTH_PTS, z);
+            const topY = sampleCurve(FENDER_CREST_PTS, z);
+            const archY = archCutout(z, -1.177, 0.405, 0.367);
+            const botY = Math.max(0.17, archY);
+
+            let x, y;
+            if (v < 0.42) {
+              const t = v / 0.42;
+              x = lerp(innerX, outerX * 0.96, t);
+              y = lerp(topY + 0.03, topY, Math.sin(t * Math.PI * 0.5));
+            } else {
+              const t = (v - 0.42) / 0.58;
+              x = lerp(outerX * 0.96, outerX, Math.sin(t * Math.PI * 0.5));
+              y = lerp(topY, botY, t);
+            }
+            return [x, y, z];
+          });
+          bodyShellGroup.add(new THREE.Mesh(rearQGeo, pMat));
+
+          // Seitlicher Prozessluft-Einlass (GT3 RS Side Intake vor Hinterrad)
+          const scoop = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.24), cMat);
+          scoop.position.set(dir * 0.95, 0.54, -0.68);
+          scoop.rotation.y = dir * 0.16;
+          bodyShellGroup.add(scoop);
+
+          // A-Säule & C-Säulen-Dachrahmen
+          const pillarGeo = createSurfaceGeometry(22, 4, (u, v) => {
+            const z = lerp(0.68, -1.78, u);
+            const centerY = sampleCurve(CENTER_TOP_PTS, z);
+            const beltY = sampleCurve(FENDER_CREST_PTS, z);
+            const y = lerp(centerY, beltY + 0.04, v);
+            const x = dir * lerp(0.57, 0.72, v);
+            return [x, y, z];
+          });
+          bodyShellGroup.add(new THREE.Mesh(pillarGeo, pMat));
+
+          // Hinteres kleines Seitenfenster
+          const qWin = createSurfaceGeometry(8, 5, (u, v) => {
+            const z = lerp(-0.46, -1.05, u);
+            const botY = sampleCurve(FENDER_CREST_PTS, z) + 0.03;
+            const topY = sampleCurve(CENTER_TOP_PTS, z) - 0.06;
+            const y = lerp(botY, topY, v);
+            const x = dir * lerp(0.70, 0.58, v);
+            return [x, y, z];
+          });
+          bodyShellGroup.add(new THREE.Mesh(qWin, gMat));
+        });
+
+        // Frontscheibe
+        const windGeo = createSurfaceGeometry(14, 10, (u, v) => {
+          const z = lerp(0.69, 0.18, v);
+          const y = sampleCurve(CENTER_TOP_PTS, z);
+          const halfW = lerp(0.62, 0.56, v);
+          const x = (u - 0.5) * 2 * halfW;
+          const curve = Math.cos((u - 0.5) * Math.PI) * 0.04;
+          return [x, y + curve * 0.5, z + curve];
+        });
+        bodyShellGroup.add(new THREE.Mesh(windGeo, gMat));
+
+        // Heckscheibe & Motordeckel-Lamellen
+        const rearWinGeo = createSurfaceGeometry(14, 10, (u, v) => {
+          const z = lerp(-0.62, -1.26, v);
+          const y = sampleCurve(CENTER_TOP_PTS, z) + 0.005;
+          const halfW = lerp(0.56, 0.54, v);
+          const x = (u - 0.5) * 2 * halfW;
+          return [x, y, z];
+        });
+        bodyShellGroup.add(new THREE.Mesh(rearWinGeo, gMat));
+
+        const decklidGeo = createSurfaceGeometry(14, 10, (u, v) => {
+          const z = lerp(-1.26, -2.05, v);
+          const y = sampleCurve(CENTER_TOP_PTS, z);
+          const halfW = lerp(0.56, 0.58, v);
+          const x = (u - 0.5) * 2 * halfW;
+          return [x, y, z];
+        });
+        bodyShellGroup.add(new THREE.Mesh(decklidGeo, cMat));
+
+        tagPart(bodyShellGroup, pid);
+        registerSubMove(pid, bodyShellGroup, new THREE.Vector3(0, 0.72, 0), new THREE.Vector3(0, 0.88, -1.15));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 8: CFK-DACH MIT AERO-DACHFINNEN
+      // =========================================================================
+      const roofGroup = new THREE.Group();
+      carRoot.add(roofGroup);
+      {
+        const pid = 'roof';
+        const cMat = makeCarbonMat(pid);
+
+        const roofGeo = createSurfaceGeometry(14, 14, (u, v) => {
+          const z = lerp(0.18, -0.62, v);
+          const halfW = 0.57;
+          const x = (u - 0.5) * 2 * halfW;
+          const dome = Math.cos((u - 0.5) * Math.PI) * 0.032;
+          const y = sampleCurve(CENTER_TOP_PTS, z) + dome;
+          return [x, y, z];
+        });
+        roofGroup.add(new THREE.Mesh(roofGeo, cMat));
+
+        // Markante Zwillings-Dachfinnen des 992 GT3 RS
+        [-0.45, 0.45].forEach((fx) => {
+          const fin = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.048, 0.68), cMat);
+          fin.position.set(fx, 1.325, -0.22);
+          roofGroup.add(fin);
+        });
+
+        tagPart(roofGroup, pid);
+        registerSubMove(pid, roofGroup, new THREE.Vector3(0, 1.38, -0.05), new THREE.Vector3(0, 1.33, -0.22));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 9: INTERIEUR, CFK-SCHALENSITZE & ÜBERROLLKÄFIG
+      // =========================================================================
+      const interiorGroup = new THREE.Group();
+      carRoot.add(interiorGroup);
+      {
+        const pid = 'interior';
+        const seatMat = makeDarkMat(pid, 0x1b1e25, 0.72);
+        const carbonShell = makeCarbonMat(pid, false);
+        const cageMat = makeMetalMat(pid, 0x7b8594, 0.32, 0.85);
+        const accentRed = makeDarkMat(pid, 0xc92222, 0.55);
+
+        // Armaturenbrett & 5-fach Kombiinstrument
+        const dash = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.22, 0.36), seatMat);
+        dash.position.set(0, 0.67, 0.48);
+        interiorGroup.add(dash);
+
+        const cluster = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.11, 0.08), carbonShell);
+        cluster.position.set(0.34, 0.80, 0.44);
+        interiorGroup.add(cluster);
+
+        // Lenksäule & GT3 RS Sportlenkrad (Linkslenker bei x = +0.34)
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.019, 10, 28), seatMat);
+        wheel.position.set(0.34, 0.72, 0.25);
+        wheel.rotation.x = -0.35;
+        interiorGroup.add(wheel);
+
+        const twelveOClock = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.042, 0.042), accentRed);
+        twelveOClock.position.set(0.34, 0.855, 0.20);
+        interiorGroup.add(twelveOClock);
+
+        // Mittelkonsole & PDK-Wählhebel
+        const consoleMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.92), seatMat);
+        consoleMesh.position.set(0, 0.38, 0.08);
+        interiorGroup.add(consoleMesh);
+
+        const shifter = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.018, 0.14, 12), cageMat);
+        shifter.position.set(0, 0.51, 0.22);
+        interiorGroup.add(shifter);
+
+        // Zwei CFK-Vollschalensitze
+        [-0.34, 0.34].forEach((sx) => {
+          const base = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.10, 0.44), carbonShell);
+          base.position.set(sx, 0.26, -0.02);
+          interiorGroup.add(base);
+
+          const back = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.64, 0.09), carbonShell);
+          back.position.set(sx, 0.58, -0.24);
+          back.rotation.x = -0.22;
+          interiorGroup.add(back);
+
+          const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.58, 0.06), seatMat);
+          cushion.position.set(sx, 0.58, -0.21);
+          cushion.rotation.x = -0.22;
+          interiorGroup.add(cushion);
+        });
+
+        // Clubsport-Überrollkäfig hinten
+        [-0.50, 0.50].forEach((cx) => {
+          const mainPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.84, 12), cageMat);
+          mainPillar.position.set(cx, 0.66, -0.44);
+          interiorGroup.add(mainPillar);
+
+          const rearBrace = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.62, 12), cageMat);
+          rearBrace.position.set(cx * 0.92, 0.72, -0.68);
+          rearBrace.rotation.x = 0.82;
+          interiorGroup.add(rearBrace);
+        });
+        const topBar = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1.04, 12), cageMat);
+        topBar.rotation.z = Math.PI / 2;
+        topBar.position.set(0, 1.07, -0.44);
+        interiorGroup.add(topBar);
+
+        const diagBar = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.24, 12), cageMat);
+        diagBar.rotation.z = 0.90;
+        diagBar.position.set(0, 0.68, -0.44);
+        interiorGroup.add(diagBar);
+
+        tagPart(interiorGroup, pid);
+        registerSubMove(pid, interiorGroup, new THREE.Vector3(0, 0.92, 0), new THREE.Vector3(0, 0.62, 0.0));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 10: 4,0L-SECHSZYLINDER-BOXERMOTOR & 7-GANG-PDK
+      // =========================================================================
+      const engineGroup = new THREE.Group();
+      carRoot.add(engineGroup);
+      {
+        const pid = 'engine';
+        const blockMat = makeMetalMat(pid, 0x9aa3b0, 0.35, 0.85);
+        const intakeMat = makeDarkMat(pid, 0x1e222a, 0.5);
+        const goldMat = makeMetalMat(pid, 0xc79e46, 0.3, 0.85);
+        const transMat = makeMetalMat(pid, 0x6f7784, 0.42, 0.82);
+
+        // Kurbelgehäuse (Mitte bei z = -1.56)
+        const crankcase = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.24, 0.58), blockMat);
+        crankcase.position.set(0, 0.38, -1.56);
+        engineGroup.add(crankcase);
+
+        // 6 horizontal gegenüberliegende Boxer-Zylinder + Ventildeckel
+        [-1, 1].forEach((dir) => {
+          for (let c = 0; c < 3; c++) {
+            const zPos = -1.39 - c * 0.165 + (dir > 0 ? 0.02 : 0);
+            const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.22, 16), blockMat);
+            cyl.rotation.z = Math.PI / 2;
+            cyl.position.set(dir * 0.25, 0.38, zPos);
+            engineGroup.add(cyl);
+
+            // Einzel-Ansaugkanal nach oben in den Sammler
+            const runner = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.22, 12), intakeMat);
+            runner.position.set(dir * 0.22, 0.54, zPos);
+            runner.rotation.z = dir * 0.18;
+            engineGroup.add(runner);
+          }
+
+          // Großer Resonanz-Ansaugsammler (Plenum) je Bank
+          const plenum = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.54, 18), intakeMat);
+          plenum.rotation.x = Math.PI / 2;
+          plenum.position.set(dir * 0.20, 0.65, -1.56);
+          engineGroup.add(plenum);
+        });
+
+        // Verbindungsrohr mit "4.0"-Plakette
+        const balanceTube = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.075, 0.16), intakeMat);
+        balanceTube.position.set(0, 0.66, -1.52);
+        engineGroup.add(balanceTube);
+
+        const badge40 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.015, 0.09), goldMat);
+        badge40.position.set(0, 0.705, -1.52);
+        engineGroup.add(badge40);
+
+        // Riementrieb & Riemenscheiben hinten
+        const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.03, 18), goldMat);
+        pulley.rotation.x = Math.PI / 2;
+        pulley.position.set(0, 0.40, -1.87);
+        engineGroup.add(pulley);
+
+        // 7-Gang-PDK-Getriebe vor der Hinterachse
+        const pdk = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.17, 0.54, 18), transMat);
+        pdk.rotation.x = Math.PI / 2;
+        pdk.position.set(0, 0.37, -1.04);
+        engineGroup.add(pdk);
+
+        // Antriebswellen zur Hinterachse
+        const axleShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 1.44, 12), transMat);
+        axleShaft.rotation.z = Math.PI / 2;
+        axleShaft.position.set(0, 0.367, -1.177);
+        engineGroup.add(axleShaft);
+
+        tagPart(engineGroup, pid);
+        registerSubMove(pid, engineGroup, new THREE.Vector3(0, 0.68, -1.02), new THREE.Vector3(0, 0.44, -1.55));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 11: FÄCHERKRÜMMER & TITAN-ABGASANLAGE
+      // =========================================================================
+      const exhaustGroup = new THREE.Group();
+      carRoot.add(exhaustGroup);
+      {
+        const pid = 'exhaust';
+        const tiMat = makeMetalMat(pid, 0xb8a894, 0.26, 0.9);
+        const blueTiMat = makeMetalMat(pid, 0x8997b8, 0.22, 0.92);
+
+        // Zentraler Titan-Endschalldämpfer
+        const muffler = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.62, 20), tiMat);
+        muffler.rotation.z = Math.PI / 2;
+        muffler.position.set(0, 0.28, -2.02);
+        exhaustGroup.add(muffler);
+
+        // Twin zentrale Endrohre
+        [-0.085, 0.085].forEach((tx) => {
+          const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.052, 0.20, 20), blueTiMat);
+          tip.rotation.x = Math.PI / 2;
+          tip.position.set(tx, 0.27, -2.18);
+          exhaustGroup.add(tip);
+        });
+
+        // 6-in-2 Fächerkrümmer links & rechts
+        [-1, 1].forEach((dir) => {
+          for (let c = 0; c < 3; c++) {
+            const zStart = -1.39 - c * 0.165;
+            const curve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(dir * 0.28, 0.31, zStart),
+              new THREE.Vector3(dir * 0.38, 0.24, zStart - 0.14),
+              new THREE.Vector3(dir * 0.28, 0.27, -1.96)
+            ]);
+            const header = new THREE.Mesh(new THREE.TubeGeometry(curve, 14, 0.022, 8, false), tiMat);
+            exhaustGroup.add(header);
+          }
+          // Kat / OPF
+          const cat = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.24, 16), tiMat);
+          cat.rotation.x = Math.PI / 2;
+          cat.position.set(dir * 0.30, 0.27, -1.92);
+          exhaustGroup.add(cat);
+        });
+
+        tagPart(exhaustGroup, pid);
+        registerSubMove(pid, exhaustGroup, new THREE.Vector3(0, -0.32, -1.56), new THREE.Vector3(0, 0.27, -2.02));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 12: HECKSCHÜRZE, LED-LEUCHTBAND & VENTURI-DIFFUSOR
+      // =========================================================================
+      const rearBumperGroup = new THREE.Group();
+      carRoot.add(rearBumperGroup);
+      {
+        const pid = 'rearBumper';
+        const pMat = makePaintMat(pid);
+        const cMat = makeCarbonMat(pid);
+        const ledMat = registerMat(pid, new THREE.MeshStandardMaterial({
+          color: 0xff2020, emissive: 0xff1111, emissiveIntensity: 2.5, roughness: 0.15
+        }));
+
+        // Obere lackierte Heckblende
+        const upperFascia = new THREE.Mesh(new THREE.BoxGeometry(1.66, 0.22, 0.12), pMat);
+        upperFascia.position.set(0, 0.65, -2.14);
+        rearBumperGroup.add(upperFascia);
+
+        // Durchgehendes 992-LED-Rückleuchtenband
+        const lightBar = new THREE.Mesh(new THREE.BoxGeometry(1.64, 0.042, 0.045), ledMat);
+        lightBar.position.set(0, 0.72, -2.19);
+        rearBumperGroup.add(lightBar);
+
+        // Schwarzer Heck-Luftauslass & Kennzeichenmulde
+        const rearGrille = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.20, 0.10), makeDarkMat(pid, 0x0f1218));
+        rearGrille.position.set(0, 0.45, -2.14);
+        rearBumperGroup.add(rearGrille);
+
+        // Carbon-Venturi-Heckdiffusor mit 6 Finnen
+        const diffPlate = new THREE.Mesh(new THREE.BoxGeometry(1.56, 0.04, 0.42), cMat);
+        diffPlate.position.set(0, 0.21, -2.04);
+        diffPlate.rotation.x = 0.24;
+        rearBumperGroup.add(diffPlate);
+
+        [-0.64, -0.42, -0.20, 0.20, 0.42, 0.64].forEach((fx) => {
+          const fin = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.14, 0.38), cMat);
+          fin.position.set(fx, 0.20, -2.04);
+          rearBumperGroup.add(fin);
+        });
+
+        tagPart(rearBumperGroup, pid);
+        registerSubMove(pid, rearBumperGroup, new THREE.Vector3(0, -0.05, -1.28), new THREE.Vector3(0, 0.45, -2.14));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 13: SWAN-NECK-HECKFLÜGEL MIT AKTIVEM DRS
+      // =========================================================================
+      const wingGroup = new THREE.Group();
+      carRoot.add(wingGroup);
+      let drsFlapPivot;
+      {
+        const pid = 'wing';
+        const cMat = makeCarbonMat(pid);
+        const aluMat = makeMetalMat(pid, 0x2a2f3a, 0.26, 0.9);
+        const pMat = makePaintMat(pid);
+
+        // Flügelprofil (gekrümmtes Tragflächenprofil)
+        function createAirfoil(span, chord, camber) {
+          return createSurfaceGeometry(22, 12, (u, v) => {
+            const x = (u - 0.5) * span;
+            const zLocal = lerp(chord * 0.5, -chord * 0.5, v);
+            const curveY = -Math.sin(v * Math.PI) * camber;
+            const dihedral = Math.pow(Math.abs(u - 0.5) * 2, 2) * 0.02;
+            return [x, curveY + dihedral, zLocal];
+          });
+        }
+
+        // Haupt-Unterblatt (statisch)
+        const mainBlade = new THREE.Mesh(createAirfoil(1.88, 0.26, 0.032), cMat);
+        mainBlade.position.set(0, 1.30, -2.06);
+        mainBlade.rotation.x = 0.12;
+        wingGroup.add(mainBlade);
+
+        // Aktiver oberer DRS-Flügel (schwenkbar!)
+        drsFlapPivot = new THREE.Group();
+        drsFlapPivot.position.set(0, 1.375, -2.15);
+        drsFlapPivot.rotation.x = 0.28; // High-Downforce-Winkel als Ausgangsstellung
+        const drsBlade = new THREE.Mesh(createAirfoil(1.86, 0.16, 0.022), cMat);
+        drsFlapPivot.add(drsBlade);
+        wingGroup.add(drsFlapPivot);
+
+        // Endplates links & rechts
+        [-0.95, 0.95].forEach((ex) => {
+          const endPlate = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.24, 0.44), cMat);
+          endPlate.position.set(ex, 1.33, -2.09);
+          wingGroup.add(endPlate);
+
+          const accentStrip = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.025, 0.36), pMat);
+          accentStrip.position.set(ex, 1.24, -2.09);
+          wingGroup.add(accentStrip);
+        });
+
+        // Twin CNC-Swan-Neck-Stützen (greifen von oben auf das Blatt!)
+        [-0.41, 0.41].forEach((px) => {
+          const pylonCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(px, 0.90, -1.78),
+            new THREE.Vector3(px, 1.24, -1.86),
+            new THREE.Vector3(px, 1.43, -1.97),
+            new THREE.Vector3(px, 1.32, -2.06)
+          ]);
+          const pylon = new THREE.Mesh(new THREE.TubeGeometry(pylonCurve, 18, 0.022, 8, false), aluMat);
+          pylon.scale.set(0.48, 1, 1.35);
+          wingGroup.add(pylon);
+        });
+
+        tagPart(wingGroup, pid);
+        registerSubMove(pid, wingGroup, new THREE.Vector3(0, 1.36, -0.96), new THREE.Vector3(0, 1.00, -1.82));
+      }
+
+      // =========================================================================
+      // BAUGRUPPE 14: PCCB-KERAMIKBREMSEN & SCHMIEDERÄDER (4×)
+      // =========================================================================
+      const brakesGroup = new THREE.Group();
+      carRoot.add(brakesGroup);
+      {
+        const pid = 'brakes';
+        const rotorMat = makeMetalMat(pid, 0x3b3f47, 0.55, 0.65);
+        const hatMat = makeMetalMat(pid, 0x1e222a, 0.32, 0.85);
+        const caliperMat = registerMat(pid, new THREE.MeshPhysicalMaterial({
+          color: 0xe6b800, metalness: 0.25, roughness: 0.22, clearcoat: 0.95
+        }));
+        const tireMat = makeDarkMat(pid, 0x15171c, 0.84);
+        const rimMat = makeMetalMat(pid, 0x262a32, 0.25, 0.88);
+        const lockMat = makeMetalMat(pid, 0xb82222, 0.25, 0.85);
+
+        const corners = [
+          { z: 1.28, x: 0.81, y: 0.35, r: 0.35, w: 0.275, rotorR: 0.205, dir: 1, exp: 0.55 },
+          { z: 1.28, x: -0.81, y: 0.35, r: 0.35, w: 0.275, rotorR: 0.205, dir: -1, exp: 0.55 },
+          { z: -1.177, x: 0.84, y: 0.367, r: 0.367, w: 0.335, rotorR: 0.195, dir: 1, exp: 0.60 },
+          { z: -1.177, x: -0.84, y: 0.367, r: 0.367, w: 0.335, rotorR: 0.195, dir: -1, exp: 0.60 }
+        ];
+
+        corners.forEach((c) => {
+          // 1) Keramikbremsscheibe + Gelber Sattel (fährt halb heraus)
+          const brakeUnit = new THREE.Group();
+          brakeUnit.position.set(c.x - c.dir * 0.04, c.y, c.z);
+
+          const disc = new THREE.Mesh(new THREE.CylinderGeometry(c.rotorR, c.rotorR, 0.032, 32), rotorMat);
+          disc.rotation.z = Math.PI / 2;
+          brakeUnit.add(disc);
+
+          const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.045, 24), hatMat);
+          hat.rotation.z = Math.PI / 2;
+          brakeUnit.add(hat);
+
+          const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.18, 0.11), caliperMat);
+          caliper.position.set(c.dir * 0.005, 0.06, c.z > 0 ? -c.rotorR * 0.68 : c.rotorR * 0.68);
+          caliper.rotation.x = c.z > 0 ? -0.45 : 0.45;
+          brakeUnit.add(caliper);
+
+          brakesGroup.add(brakeUnit);
+          registerSubMove(pid, brakeUnit, new THREE.Vector3(c.dir * c.exp, 0, 0), new THREE.Vector3(c.x - c.dir * 0.06, c.y, c.z));
+
+          // 2) Schmiederad + Semi-Slick + Zentralverschluss (fährt komplett nach außen)
+          const wheelUnit = new THREE.Group();
+          wheelUnit.position.set(c.x, c.y, c.z);
+
+          const wheelLocal = new THREE.Group();
+          // Lokale +Y-Achse nach außen drehen (+X für dir=1, -X für dir=-1)
+          wheelLocal.rotation.z = c.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+          wheelUnit.add(wheelLocal);
+
+          // Reifenflanke + Lauffläche
+          const tire = new THREE.Mesh(new THREE.CylinderGeometry(c.r, c.r, c.w, 36), tireMat);
+          wheelLocal.add(tire);
+
+          const rimRadius = c.r * 0.72;
+          const barrel = new THREE.Mesh(new THREE.CylinderGeometry(rimRadius, rimRadius, c.w * 0.92, 32), rimMat);
+          wheelLocal.add(barrel);
+
+          // 7× Y-Speichen
+          for (let s = 0; s < 7; s++) {
+            const ang = (s / 7) * Math.PI * 2;
+            const spokeGrp = new THREE.Group();
+            spokeGrp.rotation.y = ang;
+            const spoke1 = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.025, rimRadius * 0.88), rimMat);
+            spoke1.position.set(0.022, c.w * 0.34, rimRadius * 0.46);
+            spoke1.rotation.y = 0.14;
+            const spoke2 = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.025, rimRadius * 0.88), rimMat);
+            spoke2.position.set(-0.022, c.w * 0.34, rimRadius * 0.46);
+            spoke2.rotation.y = -0.14;
+            spokeGrp.add(spoke1, spoke2);
+            wheelLocal.add(spokeGrp);
+          }
+
+          // Zentralverschluss-Mutter
+          const centerLock = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.056, 0.06, 16), lockMat);
+          centerLock.position.y = c.w * 0.36;
+          wheelLocal.add(centerLock);
+
+          brakesGroup.add(wheelUnit);
+          registerSubMove(pid, wheelUnit, new THREE.Vector3(c.dir * (c.exp * 2.15), 0, 0), new THREE.Vector3(c.x, c.y, c.z));
+        });
+
+        tagPart(brakesGroup, pid);
+      }
+
+      // =========================================================================
+      // 5. GESTRICHELTE CAD-EXPLOSIONSACHSEN (GUIDE LINES)
+      // =========================================================================
+      const guideLinePositions = new Float32Array(guideAnchors.length * 2 * 3);
+      const guideGeo = new THREE.BufferGeometry();
+      guideGeo.setAttribute('position', new THREE.BufferAttribute(guideLinePositions, 3));
+      const guideMat = new THREE.LineDashedMaterial({
+        color: 0x73a7ff,
+        dashSize: 0.065,
+        gapSize: 0.045,
+        transparent: true,
+        opacity: 0.72
+      });
+      const guideLines = new THREE.LineSegments(guideGeo, guideMat);
+      carRoot.add(guideLines);
+
+      // Speichere Basispositionen aller beweglichen Objekte
+      const allMovables = [];
+      PARTS_DATA.forEach((p) => {
+        p.subMoves.forEach((sm) => {
+          sm.basePos = sm.obj.position.clone();
+          allMovables.push(sm);
+        });
+      });
+
+      // =========================================================================
+      // 6. EXPLOSIONS-INTERPOLATION, DRS, X-RAY & LACKFARBEN
+      // =========================================================================
+      let explodeCurrent = 0;
+      let explodeTarget = 0;
+      let drsTarget = 0.28;
+      let autoRotate = false;
+      let selectedPartId = null;
+
+      function applyExplosion(t) {
+        allMovables.forEach((sm) => {
+          sm.obj.position.set(
+            sm.basePos.x + sm.offset.x * t,
+            sm.basePos.y + sm.offset.y * t,
+            sm.basePos.z + sm.offset.z * t
+          );
+        });
+
+        // Aktualisiere gestrichelte Explosionsachsen
+        const posAttr = guideGeo.getAttribute('position');
+        for (let i = 0; i < guideAnchors.length; i++) {
+          const ga = guideAnchors[i];
+          posAttr.setXYZ(i * 2, ga.anchor.x, ga.anchor.y, ga.anchor.z);
+          posAttr.setXYZ(
+            i * 2 + 1,
+            ga.anchor.x + ga.offset.x * t,
+            ga.anchor.y + ga.offset.y * t,
+            ga.anchor.z + ga.offset.z * t
+          );
+        }
+        posAttr.needsUpdate = true;
+        guideLines.computeLineDistances();
+        guideLines.visible = document.getElementById('chk-guides').checked && t > 0.015;
+      }
+
+      // =========================================================================
+      // 7. UI-VERKNÜPFUNG & RAYCASTING-INSPEKTION
+      // =========================================================================
+      const slider = document.getElementById('explode-slider');
+      const pctLabel = document.getElementById('explode-pct');
+      const btnAssemble = document.getElementById('btn-assemble');
+      const btnExplode = document.getElementById('btn-explode');
+      const partsListEl = document.getElementById('parts-list');
+
+      function updateExplosionButtons() {
+        btnAssemble.classList.toggle('active', explodeTarget < 0.1);
+        btnExplode.classList.toggle('active', explodeTarget > 0.9);
+      }
+
+      slider.addEventListener('input', (e) => {
+        explodeTarget = parseFloat(e.target.value) / 100;
+        pctLabel.textContent = Math.round(explodeTarget * 100) + '%';
+        updateExplosionButtons();
+      });
+
+      btnAssemble.addEventListener('click', () => {
+        explodeTarget = 0;
+        slider.value = 0;
+        pctLabel.textContent = '0%';
+        updateExplosionButtons();
+      });
+
+      btnExplode.addEventListener('click', () => {
+        explodeTarget = 1;
+        slider.value = 100;
+        pctLabel.textContent = '100%';
+        updateExplosionButtons();
+      });
+
+      document.getElementById('chk-drs').addEventListener('change', (e) => {
+        drsTarget = e.target.checked ? 0.0 : 0.28;
+      });
+
+      document.getElementById('chk-xray').addEventListener('change', (e) => {
+        const on = e.target.checked;
+        xrayMatList.forEach((mat) => {
+          mat.transparent = on || mat.userData.baseTransparent;
+          mat.opacity = on ? Math.min(0.24, mat.userData.baseOpacity) : mat.userData.baseOpacity;
+          mat.depthWrite = !on;
+          mat.needsUpdate = true;
+        });
+      });
+
+      document.getElementById('chk-rotate').addEventListener('change', (e) => {
+        autoRotate = e.target.checked;
+        controls.autoRotate = autoRotate;
+        controls.autoRotateSpeed = 1.4;
+      });
+
+      // Lackfarben-Auswahl
+      const swatchesWrap = document.getElementById('paint-swatches');
+      const paintNameEl = document.getElementById('paint-name');
+      PAINT_COLORS.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'swatch' + (idx === 0 ? ' active' : '');
+        btn.style.background = '#' + p.hex.toString(16).padStart(6, '0');
+        btn.title = p.name;
+        btn.addEventListener('click', () => {
+          swatchesWrap.querySelectorAll('.swatch').forEach((s) => s.classList.remove('active'));
+          btn.classList.add('active');
+          paintNameEl.textContent = p.name;
+          paintMatList.forEach((m) => m.color.setHex(p.hex));
+        });
+        swatchesWrap.appendChild(btn);
+      });
+
+      // Bauteil-Auswahl & Highlighting
+      function selectPart(partId) {
+        if (selectedPartId === partId) {
+          partId = null;
+        }
+        selectedPartId = partId;
+
+        partMaterials.forEach((mats, pid) => {
+          const isSel = pid === selectedPartId;
+          mats.forEach((m) => {
+            if (!m.emissive) return;
+            if (isSel) {
+              m.emissive.setHex(0x3a64b8);
+              m.emissiveIntensity = 0.75;
+            } else {
+              m.emissive.copy(m.userData.baseEmissive);
+              m.emissiveIntensity = m.userData.baseEmissiveInt;
+            }
+          });
+        });
+
+        document.querySelectorAll('.part-btn').forEach((b) => {
+          b.classList.toggle('active', b.dataset.partId === selectedPartId);
+        });
+
+        const badge = document.getElementById('info-badge');
+        const title = document.getElementById('info-title');
+        const desc = document.getElementById('info-desc');
+        const specs = document.getElementById('part-specs');
+
+        if (!selectedPartId) {
+          badge.textContent = 'Gesamtfahrzeug • 992 GT3 RS';
+          title.textContent = 'Bauteil anklicken zur Inspektion';
+          desc.textContent = 'Ziehe am Explosions-Slider oder klicke auf eine Baugruppe im 3D-Modell bzw. in der Liste unten, um technische Details einzublenden.';
+          specs.innerHTML = [
+            ['Leistung', '525 PS / 9.000 U/min'],
+            ['Abtrieb (285 km/h)', '860 kg'],
+            ['0–100 km/h', '3,0 s'],
+            ['Leergewicht', '1.450 kg (DIN)']
+          ].map(([k, v]) => `<div class="spec-box"><span>${k}</span><strong>${v}</strong></div>`).join('');
+          return;
+        }
+
+        const p = partById[selectedPartId];
+        badge.textContent = `Teil #${p.num} • ${p.category}`;
+        title.textContent = p.name;
+        desc.textContent = p.desc;
+        specs.innerHTML = p.specs
+          .map(([k, v]) => `<div class="spec-box"><span>${k}</span><strong>${v}</strong></div>`)
+          .join('');
+      }
+
+      PARTS_DATA.forEach((p) => {
+        const btn = document.createElement('button');
+        btn.className = 'part-btn';
+        btn.dataset.partId = p.id;
+        btn.innerHTML = `<span class="part-num">${p.num}</span><span>${p.name}</span>`;
+        btn.addEventListener('click', () => selectPart(p.id));
+        partsListEl.appendChild(btn);
+      });
+
+      // Kamera-Presets mit sanftem Übergang
+      let camAnim = null;
+      const CAM_PRESETS = {
+        front34: { pos: [4.3, 1.95, 4.4], target: [0, 0.58, 0] },
+        side: { pos: [5.6, 0.95, 0.0], target: [0, 0.65, 0] },
+        rear: { pos: [-3.4, 1.65, -4.3], target: [0, 0.65, -1.2] },
+        top: { pos: [0.01, 6.2, 0.01], target: [0, 0.5, 0] },
+        cockpit: { pos: [0.8, 1.42, -0.15], target: [0.22, 0.65, 0.5] },
+        reset: { pos: [4.3, 1.95, 4.4], target: [0, 0.58, 0] }
+      };
+
+      document.querySelectorAll('[data-cam]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const p = CAM_PRESETS[btn.dataset.cam];
+          camAnim = {
+            pos: new THREE.Vector3(...p.pos),
+            target: new THREE.Vector3(...p.target),
+            progress: 0
+          };
+        });
+      });
+
+      // UI ausblenden
+      const toggleUiBtn = document.getElementById('toggle-ui-btn');
+      toggleUiBtn.addEventListener('click', () => {
+        const hidden = document.body.classList.toggle('ui-hidden');
+        toggleUiBtn.textContent = hidden ? 'UI einblenden' : 'UI ausblenden';
+      });
+
+      // Klick vs. Drag unterscheiden für präzises 3D-Bauteil-Picking
+      const raycaster = new THREE.Raycaster();
+      const pointerDownPos = new THREE.Vector2();
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        pointerDownPos.set(e.clientX, e.clientY);
+        camAnim = null;
+      });
+      renderer.domElement.addEventListener('pointerup', (e) => {
+        if (e.button !== 0) return;
+        const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+        if (dist > 5) return;
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        const ndc = new THREE.Vector2(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        raycaster.setFromCamera(ndc, camera);
+        const hits = raycaster.intersectObjects(carRoot.children, true);
+        const hit = hits.find((h) => h.object.userData && h.object.userData.partId);
+        if (hit) {
+          selectPart(hit.object.userData.partId);
+        }
+      });
+
+      // =========================================================================
+      // 8. RENDER-SCHLEIFE
+      // =========================================================================
+      applyExplosion(0);
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        // Sanfte Explosion
+        if (Math.abs(explodeTarget - explodeCurrent) > 0.0005) {
+          explodeCurrent += (explodeTarget - explodeCurrent) * 0.1;
+          applyExplosion(explodeCurrent);
+        }
+
+        // Sanfte DRS-Klappenbewegung
+        if (drsFlapPivot) {
+          drsFlapPivot.rotation.x += (drsTarget - drsFlapPivot.rotation.x) * 0.14;
+        }
+
+        // Sanfte Kamera-Animation
+        if (camAnim) {
+          camera.position.lerp(camAnim.pos, 0.08);
+          controls.target.lerp(camAnim.target, 0.08);
+          if (camera.position.distanceTo(camAnim.pos) < 0.02) camAnim = null;
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    })();
+  </script>
+</body>
+</html>
